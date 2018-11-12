@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <script src="./jquery.js"></script>
+    <script src="./axios.js"></script>
+</head>
+<body>
+    <div id="app"></div>
+    <script>
+
+    function fakeData(){
+        let book = {
+            'name':'JavaScript 高级程序设计',
+            'number': 2,
+            'id': 1
+        }
+
+        axios.interceptors.response.use(function (response) {
+            let {config:{url,method,data}}=response;
+            if(url === '/books/1' && method === 'get'){
+                response.data = book
+            }else if (url === '/books/1' && method === 'put') {
+                data = JSON.parse(data)
+                Object.assign(book, data)
+                response.data = book
+            }
+            return response;
+        });
+    }
+
+    fakeData();
+
+    let model = {
+        fetch(){
+            return axios.get(`/books/1`)
+              .then((response)=>{
+                this.data = response.data
+                return response
+            })
+        },
+        update(data){
+            return axios.put(`/books/1`,data)
+              .then((response)=>{
+                this.data = response.data
+                return response
+            })
+        }
+    }
+    
+    let view = {
+        el:'#app',
+        template: `
+        <div>
+            书名：《__name__》
+            数量：<span id=number>__number__</span>
+        </div>
+        <div>
+            <button id="addOne">加1</button>
+            <button id="minusOne">减1</button>
+            <button id="reset">归零</button>
+        </div>
+        `,
+        render(data){
+            let html = this.template.replace('__name__',data.name).replace('__number__',data.number);
+            $(this.el).html(html)
+        }
+    }
+
+    model.fetch(1).then(({data})=>{
+        view.render(data)
+    })
+
+
+    $('#app').on('click','#addOne',()=>{
+        let oldNumber = $('#number').text();
+        let newNumber = oldNumber-0+1;
+        model.update({'number':newNumber}).then((e)=>{
+            view.render(e.data)
+        },()=>{
+            $('#number').html(newNumber)
+        })
+    })
+
+    $('#app').on('click','#minusOne',()=>{
+        let oldNumber = $('#number').text();
+        if(oldNumber==='0'){
+            return
+        }else{
+            let newNumber = oldNumber-0-1;
+            model.update({'number':newNumber}).then((e)=>{
+                view.render(e.data)
+            },()=>{
+                $('#number').html(newNumber)
+            })        
+        }
+    })
+
+    $('#app').on('click','#reset',()=>{
+        let newNumber = 0;
+        model.update({'number':newNumber}).then((e)=>{
+            view.render(e.data)
+        },()=>{
+            $('#number').html(0)
+        })
+    })
+
+    </script>
+</body>
+</html>
